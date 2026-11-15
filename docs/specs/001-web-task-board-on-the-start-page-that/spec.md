@@ -1,7 +1,7 @@
 ---
 spec_id: 001-web-task-board-on-the-start-page-that
 title: Web task board on the start page that lists tasks and creates a task with an optional due date
-status: approved
+status: done
 priority: P1
 shape: web-nextjs
 parent: ika100-demo/taskboard17-gitops:001-persistent-tasks-and-web-task-board
@@ -99,3 +99,5 @@ keep a read-only smoke check that `/` loads and shows either the list or "No tas
 
 - 2026-11-15 created from the system plan, with its criteria (spec 147)
 - 2026-11-15 approved
+- 2026-11-15 building
+- 2026-11-15 done
