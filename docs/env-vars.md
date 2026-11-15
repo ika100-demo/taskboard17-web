@@ -16,6 +16,12 @@ Configuration is read exclusively from environment variables. Defaults below are
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(unset — tracing disabled)_ | OTLP endpoint; when set, `instrumentation.ts` enables OpenTelemetry tracing. |
 | `OTEL_SERVICE_NAME` | `taskboard17-web` | Service name reported in traces. |
 
+## Task API
+
+| Variable | Default | Description |
+|---|---|---|
+| `TASKBOARD_API_URL` | _(unset — the board shows its load error)_ | Base URL of the Task API, read on the server only (never `NEXT_PUBLIC_`). Set by the gitops entry to `http://taskboard17-api`. |
+
 ## Public (browser-exposed)
 
 Variables prefixed `NEXT_PUBLIC_` are inlined into the client bundle at build time. Never put secrets in them.

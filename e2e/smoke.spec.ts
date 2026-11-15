@@ -9,3 +9,10 @@ test("the root page loads at the base URL @smoke", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
+
+test("the start page shows the task list or the empty message @smoke", async ({ page }) => {
+  await page.goto("/");
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { level: 1, name: "Tasks" })).toBeVisible();
+  await expect(main.getByRole("list", { name: "Tasks" }).or(main.getByText("No tasks yet"))).toBeVisible();
+});

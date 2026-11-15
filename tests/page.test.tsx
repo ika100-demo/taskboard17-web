@@ -1,38 +1,44 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import HomePage from "@/app/page";
 
-describe("HomePage", () => {
-  it("renders the project heading", () => {
-    render(<HomePage />);
-    expect(screen.getByRole("heading", { level: 1, name: "taskboard17-web" })).toBeInTheDocument();
+function stubFetch(impl: () => Promise<Response> | Response) {
+  vi.stubGlobal("fetch", vi.fn(async () => impl()));
+}
+
+beforeEach(() => {
+  process.env.TASKBOARD_API_URL = "http://task-api.test";
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  delete process.env.TASKBOARD_API_URL;
+});
+
+describe("start page", () => {
+  it("renders the heading and the task list", async () => {
+    stubFetch(() => Response.json([{ id: "1", title: "Task A", due_date: "2026-03-05" }]));
+    render(await HomePage());
+    expect(screen.getByRole("heading", { level: 1, name: "Tasks" })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Tasks" })).toBeTruthy();
+    expect(screen.getByText("Task A")).toBeTruthy();
   });
 
-  it("offers the two primary actions", () => {
-    render(<HomePage />);
-    expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute("href", "#get-started");
-    expect(screen.getByRole("link", { name: "Check health" })).toHaveAttribute("href", "/api/health");
+  it("renders the empty state and the form", async () => {
+    stubFetch(() => Response.json([]));
+    render(await HomePage());
+    expect(screen.getByText("No tasks yet")).toBeTruthy();
+    expect(screen.getByRole("form", { name: "Create task" })).toBeTruthy();
   });
 
-  it("lists what is included as accessible cards", () => {
-    render(<HomePage />);
-    const features = screen.getByRole("region", { name: "What's included" });
-    const items = within(features).getAllByRole("listitem");
-    expect(items.length).toBeGreaterThanOrEqual(5);
-    expect(within(features).getByRole("heading", { level: 3, name: "Health and readiness" })).toBeInTheDocument();
-    expect(within(features).getByRole("heading", { level: 3, name: "Metrics and tracing" })).toBeInTheDocument();
-  });
-
-  it("explains how to get started in order", () => {
-    render(<HomePage />);
-    const steps = within(screen.getByRole("region", { name: "Get started" })).getAllByRole("listitem");
-    expect(steps).toHaveLength(3);
-  });
-
-  it("keeps a single level-1 heading and ordered sections", () => {
-    render(<HomePage />);
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["What's included", "Get started"]);
+  it("renders only the alert when loading fails", async () => {
+    stubFetch(() => new Response("boom", { status: 500 }));
+    render(await HomePage());
+    expect(screen.getByRole("heading", { level: 1, name: "Tasks" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toBe("Tasks could not be loaded. Try again.");
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.queryByText("No tasks yet")).toBeNull();
+    expect(screen.queryByRole("form")).toBeNull();
   });
 });
