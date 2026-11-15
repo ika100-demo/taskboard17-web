@@ -8,6 +8,11 @@ test("home page renders with its landmarks", async ({ page }) => {
   await expect(page.getByRole("contentinfo")).toBeVisible();
 });
 
+test("the header links to the health endpoint", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("banner").getByRole("link", { name: "Health" })).toHaveAttribute("href", "/api/health");
+});
+
 test("the health endpoint answers", async ({ request }) => {
   expect((await request.get("/api/health")).ok()).toBeTruthy();
 });
