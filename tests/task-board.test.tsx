@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import HomePage, { dynamic } from "@/app/page";
@@ -23,6 +23,19 @@ function hangingFetch(): typeof fetch {
       if (signal.aborted) fail();
       else signal.addEventListener("abort", fail);
     })) as typeof fetch;
+}
+
+/**
+ * Drives the client timeout with fake timers: whatever mechanism the code uses
+ * (AbortSignal.timeout or setTimeout), the abort fires on the fake clock.
+ */
+function useFakeClockForTimeout() {
+  vi.useFakeTimers();
+  vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new DOMException("timed out", "TimeoutError")), ms);
+    return controller.signal;
+  });
 }
 
 function method(init?: RequestInit): string {
@@ -54,6 +67,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   delete process.env.TASKBOARD_API_URL;
 });
@@ -200,16 +215,25 @@ describe("start page: creating tasks", () => {
     const hanging = hangingFetch();
     stubFetch((url, init) => (method(init) === "POST" ? hanging(url, init) : json([])));
     render(await HomePage());
+    useFakeClockForTimeout();
 
     fillForm("Buy milk", "2026-12-01");
     submit();
 
-    const alert = await screen.findByRole("alert", {}, { timeout: 9000 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4900);
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Task could not be saved. Try again.");
     expect(screen.getByLabelText("Title")).toHaveValue("Buy milk");
     expect(screen.getByLabelText("Due date")).toHaveValue("2026-12-01");
     expect(screen.getByText("No tasks yet")).toBeInTheDocument();
-  }, 15000);
+  });
 });
 
 describe("start page: load failures", () => {
@@ -238,9 +262,21 @@ describe("start page: load failures", () => {
 
   it("AC-001.5 shows the load error when the Task API gives no answer within 5 s", async () => {
     vi.stubGlobal("fetch", hangingFetch());
-    render(await HomePage());
+    useFakeClockForTimeout();
+
+    let settled = false;
+    const pending = HomePage().then((page) => {
+      settled = true;
+      return page;
+    });
+
+    await vi.advanceTimersByTimeAsync(4900);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(100);
+    render(await pending);
     expectLoadError();
-  }, 15000);
+  });
 });
 
 describe("start page: freshness", () => {
