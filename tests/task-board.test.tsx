@@ -155,6 +155,7 @@ describe("start page: creating tasks", () => {
     const error = await screen.findByText("Title must be 1 to 200 characters");
     expect(error).toHaveAttribute("id", "title-error");
     expect(screen.getByLabelText("Title")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Title")).toHaveAttribute("aria-describedby", "title-error");
     expect(screen.getByLabelText("Title")).toHaveValue(title);
     expect(screen.getByLabelText("Due date")).toHaveValue("2026-12-01");
     expect(fetchMock.mock.calls.length).toBe(callsBefore);
